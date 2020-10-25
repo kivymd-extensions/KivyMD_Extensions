@@ -1,0 +1,231 @@
+#!/usr/bin/env python
+
+import sys
+import argparse
+import zipfile
+import tempfile
+from shutil import rmtree, move
+from os import listdir, getcwd, chdir, makedirs
+from os.path import join, realpath, exists, isdir, expanduser, abspath, dirname
+
+try:
+    from cBytesIO import BytesIO
+except ImportError:
+    try:
+        from BytesIO import BytesIO
+    except ImportError:
+        from io import BytesIO
+
+try:
+    import requests
+except ImportError:
+    print("Components tool require requests library.")
+    print("Try to 'pip install requests' in root")
+    sys.exit(1)
+
+try:
+    import kivymd
+
+    components_kivymd_dir = abspath(join(dirname(kivymd.__file__), "components"))
+except ImportError:
+    components_kivymd_dir = None
+
+components_system_dir = join(expanduser("~"), ".kivymd", "components")
+components_app_dir = join(realpath(getcwd()), "libs", "components")
+
+
+class ComponentsTool(object):
+    """Components command-line tool."""
+
+    def main(self, argv):
+        parser = argparse.ArgumentParser(description=self.__doc__)
+        subparsers = parser.add_subparsers()
+
+        p = subparsers.add_parser(
+            "list", help="List all the installed components packages"
+        )
+        p.add_argument(
+            "--app",
+            action="store_true",
+            help="Use the local app directory (./libs/components)",
+        )
+        p.add_argument(
+            "--kivymd",
+            action="store_true",
+            help="Use the kivymd components directory (kivymd/components)",
+        )
+        p.set_defaults(func=self.cmd_list)
+
+        p = subparsers.add_parser("install", help="Install a components package")
+        p.add_argument(
+            "--app",
+            action="store_true",
+            help="Install in the local app directory (./libs/components)",
+        )
+        p.add_argument(
+            "--kivymd",
+            action="store_true",
+            help="Use the kivymd components directory (kivymd/components)",
+        )
+        p.add_argument("--upgrade", action="store_true", help="Force the installation")
+        p.add_argument(
+            "--no-download-progress",
+            action="store_false",
+            dest="animate",
+            help="Disable download progress indicator",
+        )
+        p.add_argument("package", nargs=1, help="Name of the package to install")
+        p.set_defaults(func=self.cmd_install)
+
+        p = subparsers.add_parser("uninstall", help="Uninstall a components package")
+        p.add_argument(
+            "--app",
+            action="store_true",
+            help="Use the local app directory (./libs/components)",
+        )
+        p.add_argument(
+            "--kivymd",
+            action="store_true",
+            help="Use the kivymd components directory (kivymd/components)",
+        )
+        p.add_argument("package", nargs=1, help="Name of the package to uninstall")
+        p.set_defaults(func=self.cmd_uninstall)
+
+        self.options = options = parser.parse_args(argv)
+        options.package = [p for p in getattr(options, "package", ())]
+
+        if hasattr(options, "func"):
+            options.func()
+
+        # No cmd supplied, print help message
+        else:
+            parser.print_help()
+
+        if getattr(self.options, "kivymd", False) and components_kivymd_dir is None:
+            print("--kivymd provided; cannot find kivymd")
+            sys.exit(0)
+
+    def cmd_list(self):
+        if self.options.kivymd:
+            for filename in listdir(components_kivymd_dir):
+                fullname = join(components_kivymd_dir, filename)
+                if isdir(fullname):
+                    print(fullname)
+            return
+
+        directory = components_app_dir if self.options.app else components_system_dir
+        if not exists(directory):
+            return
+
+        for filename in listdir(directory):
+            fullname = join(directory, filename)
+            if filename.startswith("components.") and isdir(fullname):
+                print(filename.split(".", 1)[-1])
+
+    def cmd_install(self):
+        opts = self.options
+        src_package = self.componentify(opts.package[0])
+        dst_package = opts.package[0] if self.options.kivymd else src_package
+
+        components_dir = (
+            components_kivymd_dir
+            if self.options.kivymd
+            else (components_app_dir if self.options.app else components_system_dir)
+        )
+        dest_dir = join(components_dir, dst_package)
+
+        if exists(dest_dir) and not opts.upgrade:
+            print("Components package already installed in {}".format(dest_dir))
+            print("Use --upgrade to upgrade.")
+            sys.exit(0)
+
+        fd = self.download(src_package, opts.animate)
+        tempdir = tempfile.mkdtemp(prefix="")
+
+        try:
+            self.extract(fd, tempdir)
+
+            if not exists(components_dir):
+                makedirs(components_dir)
+
+            if exists(dest_dir):
+                print("Removing old version...")
+                rmtree(dest_dir)
+
+            source_directory = join(tempdir, "{}-master".format(src_package))
+
+            print("Installing new version...")
+            move(source_directory, dest_dir)
+
+            print("Done! {} is installed at: {}".format(src_package, dest_dir))
+
+        finally:
+            print("Cleaning...")
+            if exists(tempdir):
+                rmtree(tempdir, ignore_errors=True)
+
+    def cmd_uninstall(self):
+        opts = self.options
+        package = (
+            opts.package[0]
+            if self.options.kivymd
+            else self.componentify(opts.package[0])
+        )
+        components_dir = (
+            components_kivymd_dir
+            if self.options.kivymd
+            else (components_app_dir if self.options.app else components_system_dir)
+        )
+
+        d = join(components_dir, package)
+        if not exists(d):
+            print("Package {} not installed, nothing to uninstall.".format(package))
+            sys.exit(0)
+
+        print("Deleting {}...".format(d))
+        rmtree(d)
+
+    def componentify(self, package):
+        # if not package.startswith("components."):
+        #     return "components." + package
+        return package
+
+    def download(self, package, animate):
+        url = "https://github.com/kivymd-components/{}/archive/master.zip".format(package)
+
+        print("Downloading {} ...".format(url))
+        r = requests.get(url)  # , prefetch=False)
+        if r.status_code != 200:
+            print(
+                "Unable to find the components package. (error={})".format(
+                    r.status_code
+                )
+            )
+            sys.exit(1)
+
+        animation = "\\|/-"
+        index = 0
+        count = 0
+        data = b""
+        for buf in r.iter_content(1024):
+            index += 1
+            data += buf
+            count += len(buf)
+            if animate:
+                print("Progression", count, animation[index % len(animation)], "\r")
+                sys.stdout.flush()
+        print("Download done ({} downloaded)".format(count))
+
+        return BytesIO(data)
+
+    def extract(self, fd, directory):
+        print("Extracting...")
+        z = zipfile.ZipFile(fd)
+        curdir = getcwd()
+        chdir(directory)
+        z.extractall()
+        chdir(curdir)
+
+
+if __name__ == "__main__":
+    ComponentsTool().main(sys.argv[1:])
