@@ -11,3 +11,11 @@ Script for installing additional components for the `KivyMD` library.
 ### Author
 
 `Kivy Team` and other contributors.
+
+### Installation
+
+`pip install kivymd-components`
+
+### Usage
+
+`componemts install package`
