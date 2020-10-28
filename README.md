@@ -17,10 +17,6 @@ Please use at your own risk.
 
 `Kivy Team` and other contributors.
 
-### Installation
-
-`pip install kivymd-components`
-
 ### Usage
 
 `componemts install package`
