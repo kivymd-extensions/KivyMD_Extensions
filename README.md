@@ -55,6 +55,6 @@ to the `install` command. This will create a `libs/components` directory in your
 current directory which will be used by `kivymd.components`. For example:
 
 ```bash
-    cd myapp
-    components install --app SweetAlert
- ```
+cd myapp
+components install --app SweetAlert
+```
