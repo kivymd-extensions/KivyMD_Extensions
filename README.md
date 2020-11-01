@@ -1,60 +1,21 @@
-# KivyMD Components
+# KivyMD Extensions
 
-<img align="left" width="200" src="https://github.com/HeaTTheatR/KivyMD-data/raw/master/gallery/kivymd-components-logo.png"/>
+<img align="left" width="256" src="https://github.com/kivymd/internal/raw/main/logo/kivymd_extensions.png"/>
 
+KivyMD Extensions is a project to centralize community addons for KivyMD.
+You can find all extensions under [@kivymd-extensions](https://github.com/kivymd-extensions)
+organization.
 
-Script for installing additional components for the `KivyMD` library.
+Extensions are maintained by community members such as yourself.
+If you want to create new extension,
+generate a repository from [extension_template](https://github.com/kivymd-extensions/extension_template),
+change all `extension_template` and `example_extension` to your new extension
+name and edit code.
+When you will be ready to publish extension,
+create new issue at [kivymd-extensions/KivyMD_Extensions](https://github.com/kivymd-extensions/KivyMD_Extensions/issues)
+with a link to your repository.
+We will create repository under organization profile and push your code there.
 
-Components is a project to centralize addons for KivyMD maintained by users.
-All the components packages are centralized on the [kivymd-components](https://github.com/kivymd-components) Github repository.
+## License
 
-The components are contributed by regular users such as yourself. The KivyMD developers do not take any responsibility for the code
-hosted in the component organization repositories - we do not actively monitor these repos.
-
-Please use at your own risk.
-
-### Author
-
-`Kivy Team` and other contributors.
-
-### Usage
-
-`componemts install package`
-
-### Legacy components tool instructions
-
-Component is now distributed as a separate Python module, kivymd-components.
-You can install it with pip:
-
-    pip install kivymd-components
-
-The components does not initially include any packages. You can download
-them with the component tool installed by the pip package:
-
-    # Installing a components
-    components install SweetAlert
-
-    # Upgrade a components
-    components install --upgrade SweetAlert
-
-    # Uninstall a components
-    components uninstall SweetAlert
-
-    # List all the components installed
-    components list
-
-    # Show the help
-    components --help
-
-All the components are installed by default in `~/.kivymd/components`.
-
-### Packaging
-
-If you want to include components in your application, you can add `--app`
-to the `install` command. This will create a `libs/components` directory in your
-current directory which will be used by `kivymd.components`. For example:
-
-```bash
-cd myapp
-components install --app SweetAlert
-```
+KivyMD Extensions is released under the terms of the [MIT License](https://github.com/kivymd-extensions/KivyMD_Extensions/blob/main/LICENSE), same as [KivyMD](https://github.com/kivymd/KivyMD/blob/master/LICENSE).
